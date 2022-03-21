@@ -1,0 +1,13 @@
+name = "SecondQuantization"
+uuid = "4bb1b9ef-2e6a-400a-895b-40086f502bb4"
+authors = ["Alberto Mercurio"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
