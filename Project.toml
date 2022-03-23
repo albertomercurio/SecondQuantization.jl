@@ -3,6 +3,12 @@ uuid = "4bb1b9ef-2e6a-400a-895b-40086f502bb4"
 authors = ["Alberto Mercurio"]
 version = "0.1.0"
 
+[deps]
+Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
+SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
+Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+TermInterface = "8ea1fca8-c5ef-4a55-8b96-4e9afe9c9a3c"
+
 [compat]
 julia = "1"
 
