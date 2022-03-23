@@ -13,3 +13,11 @@ end
     @test isequal(simplify(b * a * b, rewriter = threaded_simplifier(100)), a*b^2)
     @test isequal(simplify(b * a * c * b * 2, rewriter = threaded_simplifier(100)), flatten_term(*, flatten_term(*, 2*a*b^2*c)))
 end
+
+@testset "Latexify" begin
+    @boson a b
+    @test latexify(Expr(:latexifymerge, "\\hat{a}")) == latexify(a)
+    @test latexify(Expr(:latexifymerge, "\\hat{a}^\\dagger")) == latexify(a')
+    @test latexify(Expr(:latexifymerge, "\\hat{a}^\\dagger\\hat{b}")) == latexify(a' * b)
+    @test latexify(Expr(:latexifymerge, "\\hat{a}^\\dagger\\left(1+\\hat{b}\\right)")) == latexify(a' * (1 + b))
+end
