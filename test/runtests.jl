@@ -2,6 +2,7 @@ using SecondQuantization
 using Test
 
 using SymbolicUtils: flatten_term
+using Latexify
 
 @testset "SecondQuantization.jl" begin
     # Write your tests here.
