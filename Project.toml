@@ -10,9 +10,9 @@ Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 TermInterface = "8ea1fca8-c5ef-4a55-8b96-4e9afe9c9a3c"
 
 [compat]
-TermInterface = "0.3"
-SymbolicUtils = "0.14, 0.19"
-julia = "1.3"
+TermInterface = "0.2 - 0.3"
+SymbolicUtils = "0.14 - 0.19"
+julia = "1.4"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
