@@ -4,7 +4,7 @@ struct BosonicCreate <: QOperator end
 struct PauliSP <: QOperator end
 struct PauliSM <: QOperator end
 
-mutable struct QOperatorMeta
+mutable struct QOperatorMeta <: QOperator
     type::T where {T<:QOperator}
     h_idx::Int
 end
@@ -13,7 +13,8 @@ end
 Base.hash(op::T, h::UInt) where T<:Sym{QOperator} = hash(T, hash(op.metadata.type, hash(op.metadata.h_idx, h)))
 
 # TermInterface.exprhead(::QOperator) = :call
-# TermInterface.istree(::QOperator) = false
+TermInterface.istree(::Type{<:QOperator}) = false
+# TermInterface.arguments(::Type{<:QOperator}) = []
 
 SymbolicUtils.islike(::Symbolic{QOperator}, ::Type{Number}) = true
 

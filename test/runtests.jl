@@ -10,8 +10,17 @@ end
 
 @testset "Simplify" begin
     @boson a b c
+
+    @test isequal(simplify(b * a, rewriter = serial_simplifier), a*b)
+    @test isequal(simplify(b * a, rewriter = serial_expand_simplifier), a*b)
     @test isequal(simplify(b * a, rewriter = threaded_simplifier(100)), a*b)
+
+    @test isequal(simplify(b * a * b, rewriter = serial_simplifier), a*b^2)
+    @test isequal(simplify(b * a * b, rewriter = serial_expand_simplifier), a*b^2)
     @test isequal(simplify(b * a * b, rewriter = threaded_simplifier(100)), a*b^2)
+
+    @test isequal(simplify(b * a * c * b * 2, rewriter = serial_simplifier), flatten_term(*, flatten_term(*, 2*a*b^2*c)))
+    @test isequal(simplify(b * a * c * b * 2, rewriter = serial_expand_simplifier), flatten_term(*, flatten_term(*, 2*a*b^2*c)))
     @test isequal(simplify(b * a * c * b * 2, rewriter = threaded_simplifier(100)), flatten_term(*, flatten_term(*, 2*a*b^2*c)))
 end
 

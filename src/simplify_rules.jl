@@ -1,12 +1,14 @@
+using SymbolicUtils.Rewriters
+
 _iszero(x) = x isa Number && iszero(x)
 _isone(x) = x isa Number && isone(x)
 _isinteger(x) = (x isa Number && isinteger(x)) || (x isa Symbolic && symtype(x) <: Integer)
 _isreal(x) = (x isa Number && isreal(x)) || (x isa Symbolic && symtype(x) <: Real)
 
-let
+begin
     PLUS_RULES = [
         @rule(~x::isnotflat(+) => flatten_term(+, ~x))
-        # @rule(~x::needs_sorting(+) => sort_args(+, ~x))
+        @rule(~x::needs_sorting(+) => sort_args(+, ~x))
         @ordered_acrule(~a::is_literal_number + ~b::is_literal_number => ~a + ~b)
 
         @acrule(*(~~x) + *(~β, ~~x) => *(1 + ~β, (~~x)...))
@@ -135,7 +137,6 @@ let
     bool_simplifier() = Chain(BOOLEAN_RULES);
 
     global default_simplifier
-    global serial_simplifier
     global threaded_simplifier
     global serial_simplifier
     global serial_expand_simplifier

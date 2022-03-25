@@ -21,6 +21,17 @@ function sort_hilbert_args(f, t)
     similarterm(t, f, sort(args, lt=<ₑ))
 end
 
+# For normal order simplification only
+# function _isless(a::Sym{QOperator}, b::Sym{QOperator})
+#     idx_a, idx_b = a.metadata.h_idx, b.metadata.h_idx
+#     if idx_a == idx_b
+#         type_a = a.metadata.type
+#         type_a == BosonicCreate() && return true
+#         return false
+#     end
+#     return idx_a < idx_b
+# end
+
 <ₑ(a::Real,    b::Real) = abs(a) < abs(b)
 <ₑ(a::Complex, b::Complex) = (abs(real(a)), abs(imag(a))) < (abs(real(b)), abs(imag(b)))
 <ₑ(a::Real,    b::Complex) = true
@@ -32,6 +43,7 @@ end
 
 arglength(a) = length(arguments(a))
 function <ₑ(a, b)
+    # isequal(a, b) && return false
     if istree(a) && (b isa Symbolic && !istree(b))
         if symtype(b) != QOperator
             return false
@@ -39,14 +51,12 @@ function <ₑ(a, b)
             if symtype(a) != QOperator
                 return true
             elseif _isthere_h_idx(a, b)
-                return true
+                return false ## Needs to return false, following that for any real number r < r = false
             else
-                if b.metadata.h_idx < _min_h_idx(a)
-                    return false
-                end
+                return b.metadata.h_idx > _min_h_idx(a)
             end
         end
-        return true
+        return false
     elseif istree(b) && (a isa Symbolic && !istree(a))
         if symtype(a) != QOperator
             return true
@@ -56,12 +66,10 @@ function <ₑ(a, b)
             elseif _isthere_h_idx(b, a)
                 return true
             else
-                if a.metadata.h_idx > _min_h_idx(b)
-                    return false
-                end
+                return a.metadata.h_idx < _min_h_idx(b)
             end
         end
-        return true
+        return false
     elseif istree(a) && istree(b)
         if symtype(b) != QOperator
             if symtype(a) != QOperator
@@ -70,9 +78,9 @@ function <ₑ(a, b)
                 return false
             end
         else
-            return true
+            return false ## Needs to return false, following that for any real number r < r = false
         end
-        return true
+        return false
     else
         return a <ₑ b
     end
@@ -158,6 +166,40 @@ function cmp_term_term(a, b)
     end
 end
 
+function flatten_term(⋆, x)
+    args = arguments(x)
+    # flatten nested ⋆
+    flattened_args = []
+    for t in args
+        if istree(t) && operation(t) === (⋆)
+            if isnotflat(⋆)(t)
+                append!(flattened_args, arguments(flatten_term(⋆, t)))
+            else
+                append!(flattened_args, arguments(t))
+            end
+        else
+            push!(flattened_args, t)
+        end
+    end
+    similarterm(x, ⋆, flattened_args)
+end
+
+function isnotflat(⋆)
+    function (x)
+        if istree(x)
+            if operation(x) === (⋆)
+                args = arguments(x)
+                for t in args
+                    if istree(t) && operation(t) === (⋆)
+                        return true
+                    end
+                end
+            end
+        end
+        return false
+    end
+end
+
 function _isthere_h_idx(my_term, my_op)
     h_ind = my_op.metadata.h_idx
     op_type = my_op.metadata.type
@@ -165,7 +207,7 @@ function _isthere_h_idx(my_term, my_op)
         return false
     else
         if !istree(my_term)
-            return my_term.metadata.h_idx == h_ind && my_term.metadata.type != op_type
+            return my_term.metadata.h_idx == h_ind && my_term.metadata.type == op_type
         else
             args = arguments(my_term)
             for arg in args
@@ -177,27 +219,6 @@ function _isthere_h_idx(my_term, my_op)
 end
 
 function _min_h_idx(my_term::Term{QOperator})
-    # args = arguments(my_term)
-    # minval = 0
-    # for arg in args
-    #     if istree(arg)
-    #         h_ind_min = _min_h_idx(arg)
-    #     else
-    #         if symtype(arg) == QOperator
-    #             h_ind_min = arg.metadata.h_idx
-    #         else
-    #             h_ind_min = 0
-    #         end
-    #     end
-    #     if minval == 0
-    #         minval = h_ind_min
-    #     else
-    #         if h_ind_min < minval
-    #             minval = h_ind_min
-    #         end
-    #     end
-    # end
-    # return minval
     idxs = _list_h_idxs(my_term)
     return minimum(idxs)
 end
