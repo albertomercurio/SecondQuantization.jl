@@ -1,7 +1,22 @@
+function normal_order(x; rewriter = serial_normal_order_simplifier)
+    !istree(x) && return x
+    return simplify(x, rewriter = rewriter)
+end
+
 function isterm_op(f)
     function (x)
         if istree(x)
-            return f == x.f
+            if typeof(x) <: Term{QOperator}
+                return f == x.f
+            elseif false #typeof(x) <: Mul{QOperator} && f == (*)
+                return true
+            elseif false #typeof(x) <: Div{QOperator} && f == (/)
+                return true
+            elseif false #typeof(x) <: Add{QOperator} && f == (+)
+                return true
+            elseif false #typeof(x) <: Pow{QOperator} && f == (^)
+                return true
+            end
         end
         return false
     end
@@ -22,15 +37,19 @@ function sort_hilbert_args(f, t)
 end
 
 # For normal order simplification only
-# function _isless(a::Sym{QOperator}, b::Sym{QOperator})
-#     idx_a, idx_b = a.metadata.h_idx, b.metadata.h_idx
-#     if idx_a == idx_b
-#         type_a = a.metadata.type
-#         type_a == BosonicCreate() && return true
-#         return false
-#     end
-#     return idx_a < idx_b
-# end
+function is_not_normal_ordered(x)
+    length(x) != 2 && return false
+    (istree(x[1]) || istree(x[2])) && return false # It is not alway true, we need to extend it
+    (!(symtype(x[1]) <: QOperator) || !(symtype(x[2]) <: QOperator)) && return false
+    metadt_a = getmetadata(x[1], QOperatorMeta)
+    metadt_b = getmetadata(x[2], QOperatorMeta)
+    if metadt_a.h_idx == metadt_b.h_idx
+        if metadt_a.type == BosonicDestroy() && metadt_b.type == BosonicCreate()
+            return true
+        end
+    end
+    return false
+end
 
 <ₑ(a::Real,    b::Real) = abs(a) < abs(b)
 <ₑ(a::Complex, b::Complex) = (abs(real(a)), abs(imag(a))) < (abs(real(b)), abs(imag(b)))
@@ -39,7 +58,9 @@ end
 
 <ₑ(a::Symbolic, b::Number) = false
 <ₑ(a::Number,   b::Symbolic) = true
-<ₑ(a::Sym{QOperator}, b::Sym{QOperator}) = a.metadata.h_idx < b.metadata.h_idx
+<ₑ(a::Sym{Number},   b::Sym{QOperator}) = true
+<ₑ(a::Sym{QOperator},   b::Sym{Number}) = false
+<ₑ(a::Sym{QOperator}, b::Sym{QOperator}) = getmetadata(a, QOperatorMeta).h_idx < getmetadata(b, QOperatorMeta).h_idx
 
 arglength(a) = length(arguments(a))
 function <ₑ(a, b)
@@ -53,7 +74,7 @@ function <ₑ(a, b)
             elseif _isthere_h_idx(a, b)
                 return false ## Needs to return false, following that for any real number r < r = false
             else
-                return b.metadata.h_idx > _min_h_idx(a)
+                return getmetadata(b, QOperatorMeta).h_idx > _min_h_idx(a)
             end
         end
         return false
@@ -66,7 +87,7 @@ function <ₑ(a, b)
             elseif _isthere_h_idx(b, a)
                 return true
             else
-                return a.metadata.h_idx < _min_h_idx(b)
+                return getmetadata(a, QOperatorMeta).h_idx < _min_h_idx(b)
             end
         end
         return false
@@ -201,13 +222,14 @@ function isnotflat(⋆)
 end
 
 function _isthere_h_idx(my_term, my_op)
-    h_ind = my_op.metadata.h_idx
-    op_type = my_op.metadata.type
+    metadt = getmetadata(my_op, QOperatorMeta)
+    h_ind = metadt.h_idx
+    op_type = metadt.type
     if symtype(my_term) != QOperator
         return false
     else
         if !istree(my_term)
-            return my_term.metadata.h_idx == h_ind && my_term.metadata.type == op_type
+            return getmetadata(my_term, QOperatorMeta).h_idx == h_ind && getmetadata(my_term, QOperatorMeta).type == op_type
         else
             args = arguments(my_term)
             for arg in args
@@ -231,7 +253,7 @@ function _list_h_idxs(my_term::Term{QOperator})
             h_idxs = _list_h_idxs(arg)
         else
             if symtype(arg) == QOperator
-                h_idxs = [arg.metadata.h_idx]
+                h_idxs = [getmetadata(arg, QOperatorMeta).h_idx]
             else
                 h_idxs = []
             end
