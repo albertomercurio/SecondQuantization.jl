@@ -145,9 +145,9 @@ begin
         @ordered_acrule((~z::_isone  * ~x) => ~x)
         @ordered_acrule((~z::_iszero *  ~x) => ~z)
         @rule(*(~x) => ~x)
+        @rule( ^(~x::istree, ~n::is_literal_number) => *([~x for i in 1:~n]...) )
         @rule( *(~~x, (~α + ~β)) => *((~~x)..., ~α) + *((~~x)..., ~β) )
         @rule( *((~α + ~β), ~~x) => *(~α, (~~x)...) + *(~β, (~~x)...) )
-        @rule( ^(~x::istree, ~n::is_literal_number) => *([~x for i in 1:~n]...) )
         @rule( *(~~a, ~x::sym_isa(Number), ~~b) / ~y::sym_isa(Number) => *((~~a)..., ~x / ~y, (~~b)...) )
 
         ### POW_RULES ###

@@ -2,13 +2,11 @@ using SecondQuantization
 using Test
 
 using SecondQuantization: flatten_term
-using SymbolicUtils
-# using SymbolicUtils: flatten_term
 using Latexify
 
 @testset "Simplify and Normal Order" begin
     @boson a b c
-    @syms ω
+    @parameter ω
 
     @test isequal(simplify(b * a, rewriter = serial_simplifier), a*b)
     @test isequal(simplify(b * a, rewriter = serial_expand_simplifier), a*b)
@@ -37,7 +35,7 @@ end
 
 @testset "Latexify" begin
     @boson a b
-    @syms ω
+    @parameter ω
 
     @test latexify(Expr(:latexifymerge, "\\hat{a}")) == latexify(a)
     @test latexify(Expr(:latexifymerge, "\\hat{a}^\\dagger")) == latexify(a')
@@ -53,6 +51,7 @@ end
 
 @testset "Commutator" begin
     @boson a b
+    @parameter ω δ
 
     @test isequal(commutator(a, b), 0)
     @test isequal(commutator(a, a), 0)
