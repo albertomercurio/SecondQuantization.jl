@@ -11,9 +11,11 @@ end
 end
 
 _to_expression(x::Number) = x
+_to_expression(op::Symbolic{Number}) = String(op.name)
 
 function _to_expression(op::Symbolic{QOperator})
-    op_type = op.metadata.type
+    metadt = getmetadata(op, QOperatorMeta)
+    op_type = metadt.type
     if op_type == BosonicCreate()
         return ["\\hat{", String(op.name)[1:end-2], "}^\\dagger"]
     elseif op_type == PauliSM()
@@ -40,17 +42,32 @@ function _to_expression(my_term::Term{QOperator})
             end
         end
     elseif my_f == (/) && length(args) == 2
-        append!(my_args, "\\frac{")
-        append!(my_args, _to_expression(args[1]))
-        append!(my_args, "}{")
-        append!(my_args, _to_expression(args[2]))
-        append!(my_args, "}")
+        if istree(args[1])
+            append!(my_args, ["\\frac{1}{", args[2], "}"])
+            append!(my_args, "\\left(")
+            append!(my_args, _to_expression(args[1]))
+            append!(my_args, "\\right)")
+        else
+            append!(my_args, "\\frac{")
+            append!(my_args, _to_expression(args[1]))
+            append!(my_args, "}{")
+            append!(my_args, _to_expression(args[2]))
+            append!(my_args, "}")
+        end
     elseif my_f == (^) && length(args) == 2
-        append!(my_args, "{")
-        append!(my_args, _to_expression(args[1]))
-        append!(my_args, "}^{")
-        append!(my_args, _to_expression(args[2]))
-        append!(my_args, "}")
+        if istree(args[1])
+            append!(my_args, "\\left(")
+            append!(my_args, _to_expression(args[1]))
+            append!(my_args, "\\right)^{")
+            append!(my_args, _to_expression(args[2]))
+            append!(my_args, "}")
+        else
+            append!(my_args, "{")
+            append!(my_args, _to_expression(args[1]))
+            append!(my_args, "}^{")
+            append!(my_args, _to_expression(args[2]))
+            append!(my_args, "}")
+        end
     elseif my_f == (+)
         append!(my_args, _to_expression(args[1]))
         for op in args[2:end]
