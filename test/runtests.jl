@@ -6,10 +6,6 @@ using SymbolicUtils
 # using SymbolicUtils: flatten_term
 using Latexify
 
-@testset "SecondQuantization.jl" begin
-    # Write your tests here.
-end
-
 @testset "Simplify and Normal Order" begin
     @boson a b c
     @syms ω
@@ -35,6 +31,8 @@ end
 
     @test isequal(normal_order((a + a')^2), flatten_term(+, 1 + a^2 + a'^2 + flatten_term(*, 2 * a' * a)))
     @test isequal(normal_order((a + a')^2, rewriter = threaded_normal_order_simplifier(100)), flatten_term(+, 1 + a^2 + a'^2 + flatten_term(*, 2 * a' * a)))
+
+    @test isequal(normal_order(a / a), 1)
 end
 
 @testset "Latexify" begin
@@ -51,4 +49,16 @@ end
     @test latexify(Expr(:latexifymerge, "\\sin \\left(\\hat{a}+\\hat{a}^\\dagger\\right)")) == latexify(sin(a + a'))
     @test latexify(Expr(:latexifymerge, "\\cos \\left(\\hat{a}+\\hat{a}^\\dagger\\right)")) == latexify(cos(a + a'))
     @test latexify(Expr(:latexifymerge, "e^{\\hat{a}+\\hat{a}^\\dagger}")) == latexify(exp(a + a'))
+end
+
+@testset "Commutator" begin
+    @boson a b
+
+    @test isequal(commutator(a, b), 0)
+    @test isequal(commutator(a, a), 0)
+    @test isequal(commutator(a, a'), 1)
+    @test isequal(commutator(a', a), -1)
+    @test isequal(commutator(a, a' * ω), ω)
+    @test isequal(commutator(a * ω^2 / (ω + δ), a'), ω^2 / (ω + δ))
+    @test isequal(commutator(a * ω^2, a' * δ^2), ω^2 * δ^2)
 end

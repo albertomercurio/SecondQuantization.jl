@@ -22,11 +22,11 @@ SymbolicUtils.promote_symtype(f, T::Type{<:QOperator}, S::Type{<:Number}) = T
 SymbolicUtils.promote_symtype(f, T::Type{<:Number}, S::Type{<:QOperator}) = S
 SymbolicUtils.promote_symtype(f, T::Type{<:QOperator}, S::Type{<:QOperator}) = promote_type(T,S)
 
-SymbolicUtils.promote_symtype(f, Ts::Type{<:QOperatorType}...) = promote_type(Ts...)
-SymbolicUtils.promote_symtype(f, T::Type{<:QOperatorType}, Ts...) = T
-SymbolicUtils.promote_symtype(f, T::Type{<:QOperatorType}, S::Type{<:Number}) = T
-SymbolicUtils.promote_symtype(f, T::Type{<:Number}, S::Type{<:QOperatorType}) = S
-SymbolicUtils.promote_symtype(f, T::Type{<:QOperatorType}, S::Type{<:QOperatorType}) = promote_type(T,S)
+# SymbolicUtils.promote_symtype(f, Ts::Type{<:QOperatorType}...) = promote_type(Ts...)
+# SymbolicUtils.promote_symtype(f, T::Type{<:QOperatorType}, Ts...) = T
+# SymbolicUtils.promote_symtype(f, T::Type{<:QOperatorType}, S::Type{<:Number}) = T
+# SymbolicUtils.promote_symtype(f, T::Type{<:Number}, S::Type{<:QOperatorType}) = S
+# SymbolicUtils.promote_symtype(f, T::Type{<:QOperatorType}, S::Type{<:QOperatorType}) = promote_type(T,S)
 
 SymbolicUtils.islike(::Symbolic{QOperator}, ::Type{Number}) = true
 
@@ -38,8 +38,6 @@ for f in [+, -, *, \, /, ^]
     @eval SymbolicUtils.promote_symtype(::$(typeof(f)), T::Type{<:QOperator}, S::Type{<:QOperator}) = promote_type(T,S)
 end
 
-
-SymbolicUtils.symtype(x::T) where T<:QOperator = T
 
 Base.one(::T) where T<:QOperator = one(T)
 Base.one(::Type{<:QOperator}) = 1
@@ -65,11 +63,15 @@ Base.iszero(::QOperator) = false
 -(x::Symbolic{Number}, y::Symbolic{QOperator}) = Term(-, [x, y])
 -(x::Symbolic{QOperator}, y::Number) = Term(-, [x, y])
 -(x::Number, y::Symbolic{QOperator}) = Term(-, [x, y])
--(x::Term{QOperator}) = Term(-, [0, x])
+-(x::Symbolic{QOperator}) = Term(+, [0, -1 * x])
+# -(x::Term{QOperator}) = Term(+, [0, x])
 /(x::Symbolic{QOperator}, y::Symbolic{QOperator}) = Term(/, [x, y])
+
 /(x::Symbolic{QOperator}, y::Symbolic{Number}) = Term(/, [x, y])
+# /(x::Symbolic{QOperator}, y::Symbolic{Number}) = Term(*, [x, 1 // y])
+
 /(x::Symbolic{Number}, y::Symbolic{QOperator}) = Term(/, [x, y])
-/(x::Symbolic{QOperator}, y::Number) = Term(/, [x, y])
+/(x::Symbolic{QOperator}, y::Number) = Term(*, [x, 1 // y])
 /(x::Number, y::Symbolic{QOperator}) = Term(/, [x, y])
 ^(x::Symbolic{QOperator}, n::Number) = Term(^, [x, n])
 ^(x::Symbolic{QOperator}, n::Symbolic{QOperator}) = Term(^, [x, n])
@@ -97,6 +99,10 @@ function Base.isequal(a::Term{QOperator},b::Term{QOperator})
     return true
 end
 
+function commutator(a, b)
+    return normal_order(a * b - b * a)
+end
+
 macro boson(xs...)
     global hilbert_space_iterator
     defs = map(enumerate(xs)) do (i, x)
@@ -107,6 +113,18 @@ macro boson(xs...)
         :($(esc(n)) = Sym{QOperator}($(Expr(:quote, n))); $(esc(n)) = setmetadata($(esc(n)), QOperatorMeta, QOperatorMeta(BosonicDestroy(), hilbert_space_iterator + $(esc(i)))))
     end
     hilbert_space_iterator += length(xs)
+    Expr(:block, defs...,
+         :(tuple($(map(x->esc(_name_type(x).name), xs)...))))
+end
+
+macro parameter(xs...)
+    defs = map(enumerate(xs)) do (i, x)
+        n, t = _name_type(x)
+        T = esc(t)
+        nt = _name_type(x)
+        n, t = nt.name, nt.type
+        :($(esc(n)) = Sym{$T}($(Expr(:quote, n))))
+    end
     Expr(:block, defs...,
          :(tuple($(map(x->esc(_name_type(x).name), xs)...))))
 end

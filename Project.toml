@@ -4,7 +4,6 @@ authors = ["Alberto Mercurio"]
 version = "0.1.0"
 
 [deps]
-DynamicPolynomials = "7c1d4256-1411-5781-91ec-d7bc3513ac07"
 Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"

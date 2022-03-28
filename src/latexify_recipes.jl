@@ -77,8 +77,19 @@ function _to_expression(my_term::Term{QOperator})
     elseif my_f == (-)
         append!(my_args, _to_expression(args[1]))
         for op in args[2:end]
-            append!(my_args, "-")
-            append!(my_args, _to_expression(op))
+            if istree(op)
+                if (operation(op) == (+)) || (operation(op) == (-))
+                    append!(my_args, "- \\left(")
+                    append!(my_args, _to_expression(op))
+                    append!(my_args, "\\right)")
+                else
+                    append!(my_args, "-")
+                    append!(my_args, _to_expression(op))
+                end
+            else
+                append!(my_args, "-")
+                append!(my_args, _to_expression(op))
+            end
         end
     elseif my_f == (sin)
         append!(my_args, "\\sin \\left(")
@@ -94,5 +105,48 @@ function _to_expression(my_term::Term{QOperator})
         append!(my_args, "}")
     end
 
+    return my_args
+end
+
+function _to_expression(my_term::Mul{Number})
+    args = SymbolicUtils.arguments(my_term)
+    my_args = []
+    for op in args
+        if isterm_op(+)(op) || isterm_op(-)(op)
+            append!(my_args, "\\left(")
+            append!(my_args, _to_expression(op))
+            append!(my_args, "\\right)")
+        else
+            append!(my_args, _to_expression(op))
+        end
+    end
+    return my_args
+end
+
+function _to_expression(my_term::Div{Number})
+    args = SymbolicUtils.arguments(my_term)
+    my_args = []
+    if length(args) == 2
+        append!(my_args, ["\\frac{", args[1], "}{", args[2], "}"])
+    end
+    return my_args
+end
+
+function _to_expression(my_term::Pow{Number})
+    args = SymbolicUtils.arguments(my_term)
+    my_args = []
+    if istree(args[1])
+        append!(my_args, "\\left(")
+        append!(my_args, _to_expression(args[1]))
+        append!(my_args, "\\right)^{")
+        append!(my_args, _to_expression(args[2]))
+        append!(my_args, "}")
+    else
+        append!(my_args, "{")
+        append!(my_args, _to_expression(args[1]))
+        append!(my_args, "}^{")
+        append!(my_args, _to_expression(args[2]))
+        append!(my_args, "}")
+    end
     return my_args
 end

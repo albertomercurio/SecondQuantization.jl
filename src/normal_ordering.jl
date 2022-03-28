@@ -7,15 +7,7 @@ function isterm_op(f)
     function (x)
         if istree(x)
             if typeof(x) <: Term{QOperator}
-                return f == x.f
-            elseif false #typeof(x) <: Mul{QOperator} && f == (*)
-                return true
-            elseif false #typeof(x) <: Div{QOperator} && f == (/)
-                return true
-            elseif false #typeof(x) <: Add{QOperator} && f == (+)
-                return true
-            elseif false #typeof(x) <: Pow{QOperator} && f == (^)
-                return true
+                return f == operation(x)
             end
         end
         return false
@@ -37,17 +29,19 @@ function sort_hilbert_args(f, t)
 end
 
 # For normal order simplification only
-function is_not_normal_ordered(x)
-    length(x) != 2 && return false
-    (istree(x[1]) || istree(x[2])) && return false # It is not alway true, we need to extend it
-    (!(symtype(x[1]) <: QOperator) || !(symtype(x[2]) <: QOperator)) && return false
-    metadt_a = getmetadata(x[1], QOperatorMeta)
-    metadt_b = getmetadata(x[2], QOperatorMeta)
-    if metadt_a.h_idx == metadt_b.h_idx
-        if metadt_a.type == BosonicDestroy() && metadt_b.type == BosonicCreate()
-            return true
-        end
-    end
+function is_boson_destroy(x)
+    !(symtype(x) <: QOperator) && return false
+    istree(x) && return false
+    metadt = getmetadata(x, QOperatorMeta)
+    (metadt.type == BosonicDestroy()) && return true
+    return false
+end
+
+function is_boson_create(x)
+    !(symtype(x) <: QOperator) && return false
+    istree(x) && return false
+    metadt = getmetadata(x, QOperatorMeta)
+    (metadt.type == BosonicCreate()) && return true
     return false
 end
 
@@ -58,6 +52,7 @@ end
 
 <ₑ(a::Symbolic, b::Number) = false
 <ₑ(a::Number,   b::Symbolic) = true
+<ₑ(a::Sym{Number},   b::Sym{Number}) = a.name < b.name
 <ₑ(a::Sym{Number},   b::Sym{QOperator}) = true
 <ₑ(a::Sym{QOperator},   b::Sym{Number}) = false
 <ₑ(a::Sym{QOperator}, b::Sym{QOperator}) = getmetadata(a, QOperatorMeta).h_idx < getmetadata(b, QOperatorMeta).h_idx
@@ -77,7 +72,6 @@ function <ₑ(a, b)
                 return getmetadata(b, QOperatorMeta).h_idx > _min_h_idx(a)
             end
         end
-        return false
     elseif istree(b) && (a isa Symbolic && !istree(a))
         if symtype(a) != QOperator
             return true
@@ -90,7 +84,6 @@ function <ₑ(a, b)
                 return getmetadata(a, QOperatorMeta).h_idx < _min_h_idx(b)
             end
         end
-        return false
     elseif istree(a) && istree(b)
         if symtype(b) != QOperator
             if symtype(a) != QOperator
@@ -101,7 +94,6 @@ function <ₑ(a, b)
         else
             return false ## Needs to return false, following that for any real number r < r = false
         end
-        return false
     else
         return a <ₑ b
     end

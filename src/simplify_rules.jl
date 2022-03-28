@@ -37,6 +37,8 @@ begin
         @ordered_acrule((~z::_isone  * ~x) => ~x)
         @ordered_acrule((~z::_iszero *  ~x) => ~z)
         @rule(*(~x) => ~x)
+
+        # @rule( *(~~a, ~x::sym_isa(Number), ~~b) / ~y::sym_isa(Number) => *((~~a)..., ~x / ~y, (~~b)...) )
     ]
 
 
@@ -50,11 +52,13 @@ begin
 
     ASSORTED_RULES = [
         @rule(identity(~x) => ~x)
-        # @rule(-(~x) => -1*~x)
-        # @rule(-(~x, ~y) => ~x + -1(~y))
+        @rule(-(~x) => -1*~x)
+        @rule(-(~x, ~y) => ~x + -1(~y))
         @rule(~x::_isone \ ~y => ~y)
+        @rule(~x::_iszero \ ~y => zero(symtype(~y)))
         @rule(~x \ ~y => ~y / (~x))
         @rule(~x / ~x => one(symtype(~x)))
+        @rule(~x / 1 => ~x)
         @rule(one(~x) => one(symtype(~x)))
         @rule(zero(~x) => zero(symtype(~x)))
         @rule(conj(~x::_isreal) => ~x)
@@ -122,14 +126,14 @@ begin
         @rule(~x::isnotflat(+) => flatten_term(+, ~x))
         @rule(~x::needs_sorting(+) => sort_args(+, ~x))
         @ordered_acrule(~a::is_literal_number + ~b::is_literal_number => ~a + ~b)
-        # @acrule(*(~~x) + *(~β, ~~x) => *(1 + ~β, (~~x)...))
-        # @acrule(*(~α, ~~x) + *(~β, ~~x) => *(~α + ~β, (~~x)...))
-        # @acrule(*(~~x, ~α) + *(~~x, ~β) => *(~α + ~β, (~~x)...))
-        # @acrule(~x + *(~β, ~x) => *(1 + ~β, ~x))
         @acrule(*(~α::is_literal_number, ~x) + ~x => *(~α + 1, ~x))
         @rule(+(~~x::hasrepeats) => +(merge_repeats(*, ~~x)...))
-        @ordered_acrule((~z::_iszero + ~x) => ~x)
+        @acrule((~z::_iszero + ~x) => ~x)
         @rule(+(~x) => ~x)
+        @acrule( ~x - +(~~a, ~x, ~~b) => -(0, (~~a)..., (~~b)...) )
+        @acrule( +(~~a, ~x, ~~b) - ~x => +(0, (~~a)..., (~~b)...) )
+        @acrule( ~x - ~x => zero(symtype(~x)) )
+        @rule(+(~~a, *(~~x), ~~b, *(-1, ~~x), ~~c) => +((~~a)..., (~~b)..., (~~c)...))
 
         ### TIMES_RULES ###
         @rule(~x::isnotflat(*) => flatten_term(*, ~x))
@@ -141,7 +145,10 @@ begin
         @ordered_acrule((~z::_isone  * ~x) => ~x)
         @ordered_acrule((~z::_iszero *  ~x) => ~z)
         @rule(*(~x) => ~x)
+        @rule( *(~~x, (~α + ~β)) => *((~~x)..., ~α) + *((~~x)..., ~β) )
+        @rule( *((~α + ~β), ~~x) => *(~α, (~~x)...) + *(~β, (~~x)...) )
         @rule( ^(~x::istree, ~n::is_literal_number) => *([~x for i in 1:~n]...) )
+        @rule( *(~~a, ~x::sym_isa(Number), ~~b) / ~y::sym_isa(Number) => *((~~a)..., ~x / ~y, (~~b)...) )
 
         ### POW_RULES ###
         @rule((((~x)^(~p::_isinteger))^(~q::_isinteger)) => (~x)^((~p)*(~q)))
@@ -149,12 +156,14 @@ begin
         @rule(^(~x, ~z::_isone) => ~x)
         @rule(inv(~x) => 1/(~x))
 
+        ### OTHER_RULES ###
+        # @rule( +(~~x) / ~y::sym_isa(Number) => +([a / ~y for a in (~~x)]...) )
 
-
-        @rule( *(~~x, (~α + ~β)) => *((~~x)..., ~α) + *((~~x)..., ~β) )
-        @rule( *((~α + ~β), ~~x) => *(~α, (~~x)...) + *(~β, (~~x)...) )
-
-        @rule( *( ~~x, ~~y::is_not_normal_ordered, ~~z ) => *( (~~x)..., reverse(~~y)..., (~~z)... ) + *((~~x)..., 1, (~~z)... ) )
+        ### NORMAL_ORDER_RULES ###
+        @rule( *(~~a, ~x::is_boson_destroy, ~y::is_boson_create, ~~b) => *((~~a)..., ~y * ~x + one(~x), (~~b)...) )
+        @rule( *(~~a, ~x::is_boson_destroy, (~y::is_boson_create)^(~n::is_literal_number), ~~b) => *((~~a)..., ~y * ~x + one(~x), (~y)^(~n - 1), (~~b)...) )
+        @rule( *(~~a, (~x::is_boson_destroy)^(~n::is_literal_number), ~y::is_boson_create, ~~b) => *((~~a)..., (~x)^(~n - 1), ~y * ~x + one(~x), (~~b)...) )
+        @rule( *(~~a, (~x::is_boson_destroy)^(~n::is_literal_number), (~y::is_boson_create)^(~m::is_literal_number), ~~b) => *((~~a)..., (~x)^(~n - 1), ~y * ~x + one(~x), (~y)^(~m - 1), (~~b)...) )
     ]
 
     function quantum_simplifier()
