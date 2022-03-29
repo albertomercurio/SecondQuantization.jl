@@ -71,26 +71,45 @@ function _to_expression(my_term::Term{QOperator})
     elseif my_f == (+)
         append!(my_args, _to_expression(args[1]))
         for op in args[2:end]
-            append!(my_args, "+")
-            append!(my_args, _to_expression(op))
-        end
-    elseif my_f == (-)
-        append!(my_args, _to_expression(args[1]))
-        for op in args[2:end]
             if istree(op)
-                if (operation(op) == (+)) || (operation(op) == (-))
-                    append!(my_args, "- \\left(")
-                    append!(my_args, _to_expression(op))
-                    append!(my_args, "\\right)")
+                if isterm_op(*)(op)
+                    if arguments(op)[1] == -1
+                        append!(my_args, "-")
+                        append!(my_args, _to_expression(*(arguments(op)[2:end]...)))
+                    else
+                        append!(my_args, "+")
+                        append!(my_args, _to_expression(op))
+                    end
                 else
-                    append!(my_args, "-")
+                    append!(my_args, "+")
                     append!(my_args, _to_expression(op))
                 end
             else
-                append!(my_args, "-")
-                append!(my_args, _to_expression(op))
+                if op == -1
+                    append!(my_args, "-1")
+                else
+                    append!(my_args, "+")
+                    append!(my_args, _to_expression(op))
+                end
             end
         end
+    # elseif my_f == (-)
+    #     append!(my_args, _to_expression(args[1]))
+    #     for op in args[2:end]
+    #         if istree(op)
+    #             if (operation(op) == (+)) || (operation(op) == (-))
+    #                 append!(my_args, "- \\left(")
+    #                 append!(my_args, _to_expression(op))
+    #                 append!(my_args, "\\right)")
+    #             else
+    #                 append!(my_args, "-")
+    #                 append!(my_args, _to_expression(op))
+    #             end
+    #         else
+    #             append!(my_args, "-")
+    #             append!(my_args, _to_expression(op))
+    #         end
+    #     end
     elseif my_f == (sin)
         append!(my_args, "\\sin \\left(")
         append!(my_args, _to_expression(args[1]))
@@ -105,6 +124,27 @@ function _to_expression(my_term::Term{QOperator})
         append!(my_args, "}")
     end
 
+    return my_args
+end
+
+function _to_expression(my_term::Add{Number})
+    args = SymbolicUtils.arguments(my_term)
+    my_args = []
+    append!(my_args, _to_expression(args[1]))
+    for op in args[2:end]
+        if isterm_op(*)(op)
+            if arguments(op)[1] == -1
+                append!(my_args, "-")
+                append!(my_args, _to_expression(*(arguments(op)[2:end]...)))
+            else
+                append!(my_args, "+")
+                append!(my_args, _to_expression(op))
+            end
+        else
+            append!(my_args, "+")
+            append!(my_args, _to_expression(op))
+        end
+    end
     return my_args
 end
 

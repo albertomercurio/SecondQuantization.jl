@@ -35,7 +35,7 @@ end
 
 @testset "Latexify" begin
     @boson a b
-    @parameter ω
+    @parameter ω δ
 
     @test latexify(Expr(:latexifymerge, "\\hat{a}")) == latexify(a)
     @test latexify(Expr(:latexifymerge, "\\hat{a}^\\dagger")) == latexify(a')
@@ -47,6 +47,13 @@ end
     @test latexify(Expr(:latexifymerge, "\\sin \\left(\\hat{a}+\\hat{a}^\\dagger\\right)")) == latexify(sin(a + a'))
     @test latexify(Expr(:latexifymerge, "\\cos \\left(\\hat{a}+\\hat{a}^\\dagger\\right)")) == latexify(cos(a + a'))
     @test latexify(Expr(:latexifymerge, "e^{\\hat{a}+\\hat{a}^\\dagger}")) == latexify(exp(a + a'))
+    @test latexify(Expr(:latexifymerge, "\\hat{a}-\\hat{a}^\\dagger")) == latexify(normal_order(a - a'))
+    @test latexify(Expr(:latexifymerge, "{\\hat{a}}^{2}")) == latexify(a^2)
+    @test latexify(Expr(:latexifymerge, "\\left(\\hat{a}+\\hat{a}^\\dagger\\right)^{2}")) == latexify((a + a')^2)
+    @test latexify(Expr(:latexifymerge, "\\hat{a}+\\delta\\omega")) == latexify(normal_order(a + δ * ω))
+    @test latexify(Expr(:latexifymerge, "\\hat{a}+\\frac{\\delta}{\\omega}")) == latexify(a + δ / ω)
+    @test latexify(Expr(:latexifymerge, "\\hat{a}+{\\delta}^{\\omega}")) == latexify(a + δ ^ ω)
+    @test latexify(Expr(:latexifymerge, "\\hat{a}+\\left(\\delta+\\omega\\right)^{\\omega}")) == latexify(a + (δ+ω) ^ ω)
 end
 
 @testset "Commutator" begin

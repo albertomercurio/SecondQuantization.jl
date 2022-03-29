@@ -132,7 +132,8 @@ begin
         @rule(+(~x) => ~x)
         @acrule( ~x - +(~~a, ~x, ~~b) => -(0, (~~a)..., (~~b)...) )
         @acrule( +(~~a, ~x, ~~b) - ~x => +(0, (~~a)..., (~~b)...) )
-        @acrule( ~x - ~x => zero(symtype(~x)) )
+        @acrule( ~x + -1 * ~x => zero(symtype(~x)) )
+        @acrule( *(~~x) + *(-1, ~~x) => 0 )
         @rule(+(~~a, *(~~x), ~~b, *(-1, ~~x), ~~c) => +((~~a)..., (~~b)..., (~~c)...))
 
         ### TIMES_RULES ###

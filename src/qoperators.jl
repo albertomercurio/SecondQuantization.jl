@@ -22,12 +22,6 @@ SymbolicUtils.promote_symtype(f, T::Type{<:QOperator}, S::Type{<:Number}) = T
 SymbolicUtils.promote_symtype(f, T::Type{<:Number}, S::Type{<:QOperator}) = S
 SymbolicUtils.promote_symtype(f, T::Type{<:QOperator}, S::Type{<:QOperator}) = promote_type(T,S)
 
-# SymbolicUtils.promote_symtype(f, Ts::Type{<:QOperatorType}...) = promote_type(Ts...)
-# SymbolicUtils.promote_symtype(f, T::Type{<:QOperatorType}, Ts...) = T
-# SymbolicUtils.promote_symtype(f, T::Type{<:QOperatorType}, S::Type{<:Number}) = T
-# SymbolicUtils.promote_symtype(f, T::Type{<:Number}, S::Type{<:QOperatorType}) = S
-# SymbolicUtils.promote_symtype(f, T::Type{<:QOperatorType}, S::Type{<:QOperatorType}) = promote_type(T,S)
-
 SymbolicUtils.islike(::Symbolic{QOperator}, ::Type{Number}) = true
 
 for f in [+, -, *, \, /, ^]
@@ -51,25 +45,23 @@ Base.iszero(::QOperator) = false
 *(x::Symbolic{Number}, y::Symbolic{QOperator}) = Term(*, [x, y])
 *(x::Symbolic{QOperator}, y::Number) = Term(*, [x, y])
 *(x::Number, y::Symbolic{QOperator}) = Term(*, [x, y])
-*(x::Term{QOperator}) = Term(*, [1, x])
+*(x::Symbolic{QOperator}) = x
+*(x::Term{QOperator}) = x
 +(x::Symbolic{QOperator}, y::Symbolic{QOperator}) = Term(+, [x, y])
 +(x::Symbolic{QOperator}, y::Symbolic{Number}) = Term(+, [x, y])
 +(x::Symbolic{Number}, y::Symbolic{QOperator}) = Term(+, [x, y])
 +(x::Symbolic{QOperator}, y::Number) = Term(+, [x, y])
 +(x::Number, y::Symbolic{QOperator}) = Term(+, [x, y])
-+(x::Term{QOperator}) = Term(+, [0, x])
--(x::Symbolic{QOperator}, y::Symbolic{QOperator}) = Term(-, [x, y])
--(x::Symbolic{QOperator}, y::Symbolic{Number}) = Term(-, [x, y])
--(x::Symbolic{Number}, y::Symbolic{QOperator}) = Term(-, [x, y])
--(x::Symbolic{QOperator}, y::Number) = Term(-, [x, y])
--(x::Number, y::Symbolic{QOperator}) = Term(-, [x, y])
++(x::Symbolic{QOperator}) = x
++(x::Term{QOperator}) = x
+-(x::Symbolic{QOperator}, y::Symbolic{QOperator}) = Term(+, [x, -1*y])
+-(x::Symbolic{QOperator}, y::Symbolic{Number}) = Term(+, [x, -1*y])
+-(x::Symbolic{Number}, y::Symbolic{QOperator}) = Term(+, [x, -1*y])
+-(x::Symbolic{QOperator}, y::Number) = Term(+, [x, -1*y])
+-(x::Number, y::Symbolic{QOperator}) = Term(+, [x, -1*y])
 -(x::Symbolic{QOperator}) = Term(+, [0, -1 * x])
-# -(x::Term{QOperator}) = Term(+, [0, x])
 /(x::Symbolic{QOperator}, y::Symbolic{QOperator}) = Term(/, [x, y])
-
 /(x::Symbolic{QOperator}, y::Symbolic{Number}) = Term(/, [x, y])
-# /(x::Symbolic{QOperator}, y::Symbolic{Number}) = Term(*, [x, 1 // y])
-
 /(x::Symbolic{Number}, y::Symbolic{QOperator}) = Term(/, [x, y])
 /(x::Symbolic{QOperator}, y::Number) = Term(*, [x, 1 // y])
 /(x::Number, y::Symbolic{QOperator}) = Term(/, [x, y])
