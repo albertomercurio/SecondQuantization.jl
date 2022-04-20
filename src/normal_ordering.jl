@@ -3,17 +3,6 @@ function normal_order(x; rewriter = serial_normal_order_simplifier)
     return simplify(x, rewriter = rewriter)
 end
 
-function isterm_op(f)
-    function (x)
-        if istree(x)
-            if typeof(x) <: Term{QOperator}
-                return f == operation(x)
-            end
-        end
-        return false
-    end
-end
-
 needs_hilbert_order_sorting(f) = x -> isterm_op(f)(x) && !issorted(arguments(x), lt = <ₑ)
 
 function sort_hilbert_args(f, t)
@@ -28,23 +17,6 @@ function sort_hilbert_args(f, t)
     similarterm(t, f, sort(args, lt=<ₑ))
 end
 
-# For normal order simplification only
-function is_boson_destroy(x)
-    !(symtype(x) <: QOperator) && return false
-    istree(x) && return false
-    metadt = getmetadata(x, QOperatorMeta)
-    (metadt.type == BosonicDestroy()) && return true
-    return false
-end
-
-function is_boson_create(x)
-    !(symtype(x) <: QOperator) && return false
-    istree(x) && return false
-    metadt = getmetadata(x, QOperatorMeta)
-    (metadt.type == BosonicCreate()) && return true
-    return false
-end
-
 <ₑ(a::Real,    b::Real) = abs(a) < abs(b)
 <ₑ(a::Complex, b::Complex) = (abs(real(a)), abs(imag(a))) < (abs(real(b)), abs(imag(b)))
 <ₑ(a::Real,    b::Complex) = true
@@ -54,7 +26,7 @@ end
 <ₑ(a::Number,   b::Symbolic) = true
 <ₑ(a::Sym{Number},   b::Sym{Number}) = a.name < b.name
 <ₑ(a::Sym{Number},   b::Sym{QOperator}) = true
-<ₑ(a::Sym{QOperator},   b::Sym{Number}) = false
+<ₑ(a::Sym{QOperator}, b::Sym{Number}) = false
 <ₑ(a::Sym{QOperator}, b::Sym{QOperator}) = getmetadata(a, QOperatorMeta).h_idx < getmetadata(b, QOperatorMeta).h_idx
 
 arglength(a) = length(arguments(a))
@@ -79,7 +51,7 @@ function <ₑ(a, b)
             if symtype(b) != QOperator
                 return false
             elseif _isthere_h_idx(b, a)
-                return true
+                return false
             else
                 return getmetadata(a, QOperatorMeta).h_idx < _min_h_idx(b)
             end
@@ -221,7 +193,7 @@ function _isthere_h_idx(my_term, my_op)
         return false
     else
         if !istree(my_term)
-            return getmetadata(my_term, QOperatorMeta).h_idx == h_ind && getmetadata(my_term, QOperatorMeta).type == op_type
+            return getmetadata(my_term, QOperatorMeta).h_idx == h_ind# && getmetadata(my_term, QOperatorMeta).type == op_type
         else
             args = arguments(my_term)
             for arg in args
@@ -242,7 +214,11 @@ function _list_h_idxs(my_term::Term{QOperator})
     idxs = []
     for arg in args
         if istree(arg)
-            h_idxs = _list_h_idxs(arg)
+            if symtype(arg) == QOperator
+                h_idxs = _list_h_idxs(arg)
+            else
+                h_idxs = []
+            end
         else
             if symtype(arg) == QOperator
                 h_idxs = [getmetadata(arg, QOperatorMeta).h_idx]
@@ -257,4 +233,40 @@ function _list_h_idxs(my_term::Term{QOperator})
         end
     end
     return sort(idxs)
+end
+
+get_qop_order(x::Symbolic{QOperator}) = 1
+get_qop_order(x::Symbolic{Number}) = 0
+get_qop_order(x::Number) = 0
+
+function get_qop_order(x::Term{QOperator})
+    args = arguments(x)
+    if isterm_op(*)(x)
+        return +([get_qop_order(arg) for arg in args]...)
+    elseif isterm_op(+)(x)
+        return maximum([get_qop_order(arg) for arg in args])
+    elseif isterm_op(/)(x)
+        return get_qop_order(args[1]) - get_qop_order(args[2])
+    elseif isterm_op(^)(x)
+        if args[2] isa Number
+            return get_qop_order(args[1]) * args[2]
+        else
+            return 0
+        end
+    else
+        return 0 
+    end
+end
+
+function needs_sum_ordering(x)
+    !isterm_op(+)(x) && return false
+    args = arguments(x)
+    orders = [get_qop_order(arg) for arg in args]
+    return !issorted(orders)
+end
+
+function order_sum(x)
+    args = arguments(x)
+    orders = [get_qop_order(arg) for arg in args]
+    return +(arguments(x)[sortperm(orders)]...)
 end
