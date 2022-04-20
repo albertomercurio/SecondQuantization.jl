@@ -2,12 +2,10 @@ module SecondQuantization
 
 using SymbolicUtils
 using SymbolicUtils: Sym, Symbolic, Term, Add, Mul, Div, Pow, @ordered_acrule
-using SymbolicUtils: isliteral, is_literal_number, needs_sorting, 
-hasrepeats, merge_repeats, sort_args, has_trig_exp, _name_type, sym_isa
-using Symbolics
+using SymbolicUtils: isliteral, is_literal_number, has_trig_exp, _name_type, sym_isa
 using TermInterface
 using Latexify
-import Base: +, -, *, /, ^
+import Base: (+), (-), (*), (//), (/), (\), (^)
 
 # SymbolicUtils tools
 export simplify, arguments, operation
@@ -15,6 +13,10 @@ export simplify, arguments, operation
 hilbert_space_iterator = 0
 include("qoperators.jl")
 export @boson, @parameter, commutator
+
+include("utils.jl")
+
+include("basic_operations.jl")
 
 include("normal_ordering.jl")
 export normal_order

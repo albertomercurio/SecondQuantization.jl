@@ -8,43 +8,46 @@ _isreal(x) = (x isa Number && isreal(x)) || (x isa Symbolic && symtype(x) <: Rea
 begin
     PLUS_RULES = [
         @rule(~x::isnotflat(+) => flatten_term(+, ~x))
-        @rule(~x::needs_sorting(+) => sort_args(+, ~x))
+        @rule(~x::needs_sum_ordering => order_sum(~x))
         @ordered_acrule(~a::is_literal_number + ~b::is_literal_number => ~a + ~b)
-
-        @acrule(*(~~x) + *(~β, ~~x) => *(1 + ~β, (~~x)...))
-        @acrule(*(~α, ~~x) + *(~β, ~~x) => *(~α + ~β, (~~x)...))
-        @acrule(*(~~x, ~α) + *(~~x, ~β) => *(~α + ~β, (~~x)...))
-
-        @acrule(~x + *(~β, ~x) => *(1 + ~β, ~x))
-        @acrule(*(~α::is_literal_number, ~x) + ~x => *(~α + 1, ~x))
-        @rule(+(~~x::hasrepeats) => +(merge_repeats(*, ~~x)...))
-
-        @ordered_acrule((~z::_iszero + ~x) => ~x)
+        @rule(+(~~x::hasrepeats_qterms) => +(merge_sum_common_factors(~~x)...))
+        @acrule((~z::_iszero + ~x) => ~x)
         @rule(+(~x) => ~x)
-
+        @acrule( ~x - +(~~a, ~x, ~~b) => -(0, (~~a)..., (~~b)...) )
+        @acrule( +(~~a, ~x, ~~b) + -1*~x => +(0, (~~a)..., (~~b)...) )
+        @acrule( ~x + -1 * ~x => zero(symtype(~x)) )
+        @acrule( *(~~x) + *(-1, ~~x) => 0 )
+        @rule(+(~~a, *(~~x), ~~b, *(-1, ~~x), ~~c) => +((~~a)..., (~~b)..., (~~c)...))
     ]
 
     TIMES_RULES = [
         @rule(~x::isnotflat(*) => flatten_term(*, ~x))
         @rule(~x::needs_hilbert_order_sorting(*) => sort_hilbert_args(*, ~x)) ## beacuse they may not commute
-
-        @ordered_acrule(~a::is_literal_number * ~b::is_literal_number => ~a * ~b)
         @rule(*(~~x::hasrepeats) => *(merge_repeats(^, ~~x)...))
-
-        @acrule((~y)^(~n::is_literal_number) * ~y => (~y)^(~n+1))
-        @ordered_acrule((~x)^(~n::is_literal_number) * (~x)^(~m::is_literal_number) => (~x)^(~n + ~m))
-
+        @rule( *(~~a, ~y, (~y)^(~n::is_literal_number), ~~b) => *((~~a)..., (~y)^(~n+1), (~~b)...) )
+        @rule( *(~~a, (~y)^(~n::is_literal_number), ~y, ~~b) => *((~~a)..., (~y)^(~n+1), (~~b)...) )
+        @rule( *(~~a, (~y)^(~n::is_literal_number), (~y)^(~m::is_literal_number), ~~b) => *((~~a)..., (~y)^(~n+~m), (~~b)...) )
         @ordered_acrule((~z::_isone  * ~x) => ~x)
         @ordered_acrule((~z::_iszero *  ~x) => ~z)
         @rule(*(~x) => ~x)
+        @rule( *(~~x, +(~α, ~β), ~~y) => *((~~x)..., ~α, (~~y)...) + *((~~x)..., ~β, (~~y)...) )
 
-        # @rule( *(~~a, ~x::sym_isa(Number), ~~b) / ~y::sym_isa(Number) => *((~~a)..., ~x / ~y, (~~b)...) )
+        @rule( *(~α, +(~~y)) => +([~α * ζ for ζ in (~~y)]...) )
+        @rule( *(+(~~x), ~α, +(~~y)) => +([ξ * ~α * ζ for ξ in (~~x) for ζ in (~~y)]...) )
+
+        @rule( *(~~a, ~x::sym_isa(Number), ~~b) / ~y::sym_isa(Number) => *((~~a)..., ~x / ~y, (~~b)...) )
+        @rule( *(~~a, ^(~x::istree, ~n::is_literal_number), ~~b) => *((~~a)..., [~x for i in 1:~n]..., (~~b)...) )
+
+        @rule( *(~~a, ~x::is_boson_destroy, ~y::is_boson_create, ~~b) => *((~~a)..., swap_boson(~x, ~y), (~~b)...) )
+        @rule( *(~~a, ~x::is_boson_destroy, (~y::is_boson_create)^(~n::is_literal_number), ~~b) => *((~~a)..., swap_boson(~x, ~y), (~y)^(~n - 1), (~~b)...) )
+        @rule( *(~~a, (~x::is_boson_destroy)^(~n::is_literal_number), ~y::is_boson_create, ~~b) => *((~~a)..., (~x)^(~n - 1), swap_boson(~x, ~y), (~~b)...) )
+        @rule( *(~~a, (~x::is_boson_destroy)^(~n::is_literal_number), (~y::is_boson_create)^(~m::is_literal_number), ~~b) => *((~~a)..., (~x)^(~n - 1), swap_boson(~x, ~y), (~y)^(~m - 1), (~~b)...) )
     ]
 
 
     POW_RULES = [
-        # @rule(^(*(~~x), ~y::_isinteger) => *(map(a->pow(a, ~y), ~~x)...))
-        @rule((((~x)^(~p::_isinteger))^(~q::_isinteger)) => (~x)^((~p)*(~q)))
+        @rule( ^(~x::istree, ~n::is_literal_number) => *([~x for i in 1:~n]...) )
+        @rule( (((~x)^(~p::_isinteger))^(~q::_isinteger)) => (~x)^((~p)*(~q)) )
         @rule(^(~x, ~z::_iszero) => 1)
         @rule(^(~x, ~z::_isone) => ~x)
         @rule(inv(~x) => 1/(~x))
@@ -121,53 +124,7 @@ begin
         @rule((~f)(~x::is_literal_number, ~y::is_literal_number) => (~f)(~x, ~y))
     ]
 
-    EXPAND_NORMAL_ORDER_RULES = [
-        ### PLUS_RULES ###
-        @rule(~x::isnotflat(+) => flatten_term(+, ~x))
-        @rule(~x::needs_sorting(+) => sort_args(+, ~x))
-        @ordered_acrule(~a::is_literal_number + ~b::is_literal_number => ~a + ~b)
-        @acrule(*(~α::is_literal_number, ~x) + ~x => *(~α + 1, ~x))
-        @rule(+(~~x::hasrepeats) => +(merge_repeats(*, ~~x)...))
-        @acrule((~z::_iszero + ~x) => ~x)
-        @rule(+(~x) => ~x)
-        @acrule( ~x - +(~~a, ~x, ~~b) => -(0, (~~a)..., (~~b)...) )
-        @acrule( +(~~a, ~x, ~~b) - ~x => +(0, (~~a)..., (~~b)...) )
-        @acrule( ~x + -1 * ~x => zero(symtype(~x)) )
-        @acrule( *(~~x) + *(-1, ~~x) => 0 )
-        @rule(+(~~a, *(~~x), ~~b, *(-1, ~~x), ~~c) => +((~~a)..., (~~b)..., (~~c)...))
-
-        ### TIMES_RULES ###
-        @rule(~x::isnotflat(*) => flatten_term(*, ~x))
-        @rule(~x::needs_hilbert_order_sorting(*) => sort_hilbert_args(*, ~x)) ## beacuse they may not commute
-        @ordered_acrule(~a::is_literal_number * ~b::is_literal_number => ~a * ~b)
-        @rule(*(~~x::hasrepeats) => *(merge_repeats(^, ~~x)...))
-        @acrule((~y)^(~n::is_literal_number) * ~y => (~y)^(~n+1))
-        @ordered_acrule((~x)^(~n::is_literal_number) * (~x)^(~m::is_literal_number) => (~x)^(~n + ~m))
-        @ordered_acrule((~z::_isone  * ~x) => ~x)
-        @ordered_acrule((~z::_iszero *  ~x) => ~z)
-        @rule(*(~x) => ~x)
-        @rule( ^(~x::istree, ~n::is_literal_number) => *([~x for i in 1:~n]...) )
-        @rule( *(~~x, (~α + ~β)) => *((~~x)..., ~α) + *((~~x)..., ~β) )
-        @rule( *((~α + ~β), ~~x) => *(~α, (~~x)...) + *(~β, (~~x)...) )
-        @rule( *(~~a, ~x::sym_isa(Number), ~~b) / ~y::sym_isa(Number) => *((~~a)..., ~x / ~y, (~~b)...) )
-
-        ### POW_RULES ###
-        @rule((((~x)^(~p::_isinteger))^(~q::_isinteger)) => (~x)^((~p)*(~q)))
-        @rule(^(~x, ~z::_iszero) => 1)
-        @rule(^(~x, ~z::_isone) => ~x)
-        @rule(inv(~x) => 1/(~x))
-
-        ### OTHER_RULES ###
-        # @rule( +(~~x) / ~y::sym_isa(Number) => +([a / ~y for a in (~~x)]...) )
-
-        ### NORMAL_ORDER_RULES ###
-        @rule( *(~~a, ~x::is_boson_destroy, ~y::is_boson_create, ~~b) => *((~~a)..., ~y * ~x + one(~x), (~~b)...) )
-        @rule( *(~~a, ~x::is_boson_destroy, (~y::is_boson_create)^(~n::is_literal_number), ~~b) => *((~~a)..., ~y * ~x + one(~x), (~y)^(~n - 1), (~~b)...) )
-        @rule( *(~~a, (~x::is_boson_destroy)^(~n::is_literal_number), ~y::is_boson_create, ~~b) => *((~~a)..., (~x)^(~n - 1), ~y * ~x + one(~x), (~~b)...) )
-        @rule( *(~~a, (~x::is_boson_destroy)^(~n::is_literal_number), (~y::is_boson_create)^(~m::is_literal_number), ~~b) => *((~~a)..., (~x)^(~n - 1), ~y * ~x + one(~x), (~y)^(~m - 1), (~~b)...) )
-    ]
-
-    function quantum_simplifier()
+    function quantum_normal_order_simplifier()
         rule_tree = [If(istree, Chain(ASSORTED_RULES)),
                      If(is_operation(+),
                         Chain(PLUS_RULES)),
@@ -179,40 +136,13 @@ begin
         rule_tree
     end
 
-    function quantum_normal_order_simplifier()
-        rule_tree = [If(istree, Chain(ASSORTED_RULES)),
-                     Chain(EXPAND_NORMAL_ORDER_RULES)] |> RestartedChain
-
-        rule_tree
-    end
-
     trig_exp_simplifier(;kw...) = Chain(TRIG_EXP_RULES);
 
     bool_simplifier() = Chain(BOOLEAN_RULES);
 
-    global default_simplifier
-    global threaded_simplifier
-    global serial_simplifier
-    global serial_expand_simplifier
-
     global normal_order_simplifier
     global serial_normal_order_simplifier
     global threaded_normal_order_simplifier
-
-    function default_simplifier(; kw...)
-        IfElse(has_trig_exp,
-               Postwalk(IfElse(x->symtype(x) <: QOperator,
-                               Chain((quantum_simplifier(),
-                                      trig_exp_simplifier())),
-                               If(x->symtype(x) <: Bool,
-                                  bool_simplifier()))
-                        ; kw...),
-               Postwalk(Chain((If(x->symtype(x) <: QOperator,
-                                  quantum_simplifier()),
-                               If(x->symtype(x) <: Bool,
-                                  bool_simplifier())))
-                        ; kw...))
-    end
 
     function normal_order_simplifier(; kw...)
         IfElse(has_trig_exp,
@@ -228,16 +158,6 @@ begin
                                   bool_simplifier())))
                         ; kw...))
     end
-
-    # reduce overhead of simplify by defining these as constant
-    serial_simplifier = If(istree, Fixpoint(default_simplifier()))
-
-    threaded_simplifier(cutoff) = Fixpoint(default_simplifier(threaded=true,
-                                                              thread_cutoff=cutoff));
-
-    serial_expand_simplifier = If(istree,
-                                  Fixpoint(Chain((expand,
-                                                  Fixpoint(default_simplifier())))));
 
     serial_normal_order_simplifier = If(istree, Fixpoint(normal_order_simplifier()))
 

@@ -6,14 +6,14 @@ struct PauliSP <: QOperatorType end
 struct PauliSM <: QOperatorType end
 
 mutable struct QOperatorMeta
-    type::T where {T<:QOperatorType}
+    type::QOperatorType
     h_idx::Int
 end
 
 Base.hash(op::T, h::UInt) where T<:Sym{QOperator} = hash(T, hash(getmetadata(op, QOperatorMeta).type, hash(getmetadata(op, QOperatorMeta).h_idx, h)))
 
 # TermInterface.exprhead(::QOperator) = :call
-TermInterface.istree(::Type{<:QOperator}) = false
+# TermInterface.istree(::Type{<:QOperator}) = false
 # TermInterface.arguments(::Type{<:QOperator}) = []
 
 SymbolicUtils.promote_symtype(f, Ts::Type{<:QOperator}...) = promote_type(Ts...)
@@ -21,6 +21,12 @@ SymbolicUtils.promote_symtype(f, T::Type{<:QOperator}, Ts...) = T
 SymbolicUtils.promote_symtype(f, T::Type{<:QOperator}, S::Type{<:Number}) = T
 SymbolicUtils.promote_symtype(f, T::Type{<:Number}, S::Type{<:QOperator}) = S
 SymbolicUtils.promote_symtype(f, T::Type{<:QOperator}, S::Type{<:QOperator}) = promote_type(T,S)
+
+SymbolicUtils.promote_symtype(f, Ts::Type{<:QOperatorType}...) = promote_type(Ts...)
+SymbolicUtils.promote_symtype(f, T::Type{<:QOperatorType}, Ts...) = T
+SymbolicUtils.promote_symtype(f, T::Type{<:QOperatorType}, S::Type{<:Number}) = T
+SymbolicUtils.promote_symtype(f, T::Type{<:Number}, S::Type{<:QOperatorType}) = S
+SymbolicUtils.promote_symtype(f, T::Type{<:QOperatorType}, S::Type{<:QOperatorType}) = promote_type(T,S)
 
 SymbolicUtils.islike(::Symbolic{QOperator}, ::Type{Number}) = true
 
@@ -32,57 +38,6 @@ for f in [+, -, *, \, /, ^]
     @eval SymbolicUtils.promote_symtype(::$(typeof(f)), T::Type{<:QOperator}, S::Type{<:QOperator}) = promote_type(T,S)
 end
 
-
-Base.one(::T) where T<:QOperator = one(T)
-Base.one(::Type{<:QOperator}) = 1
-Base.zero(::T) where T<:QOperator = zero(T)
-Base.zero(::Type{<:QOperator}) = 0
-Base.isone(::QOperator) = false
-Base.iszero(::QOperator) = false
-
-*(x::Symbolic{QOperator}, y::Symbolic{QOperator}) = Term(*, [x, y])
-*(x::Symbolic{QOperator}, y::Symbolic{Number}) = Term(*, [x, y])
-*(x::Symbolic{Number}, y::Symbolic{QOperator}) = Term(*, [x, y])
-*(x::Symbolic{QOperator}, y::Number) = Term(*, [x, y])
-*(x::Number, y::Symbolic{QOperator}) = Term(*, [x, y])
-*(x::Symbolic{QOperator}) = x
-*(x::Term{QOperator}) = x
-+(x::Symbolic{QOperator}, y::Symbolic{QOperator}) = Term(+, [x, y])
-+(x::Symbolic{QOperator}, y::Symbolic{Number}) = Term(+, [x, y])
-+(x::Symbolic{Number}, y::Symbolic{QOperator}) = Term(+, [x, y])
-+(x::Symbolic{QOperator}, y::Number) = Term(+, [x, y])
-+(x::Number, y::Symbolic{QOperator}) = Term(+, [x, y])
-+(x::Symbolic{QOperator}) = x
-+(x::Term{QOperator}) = x
--(x::Symbolic{QOperator}, y::Symbolic{QOperator}) = Term(+, [x, -1*y])
--(x::Symbolic{QOperator}, y::Symbolic{Number}) = Term(+, [x, -1*y])
--(x::Symbolic{Number}, y::Symbolic{QOperator}) = Term(+, [x, -1*y])
--(x::Symbolic{QOperator}, y::Number) = Term(+, [x, -1*y])
--(x::Number, y::Symbolic{QOperator}) = Term(+, [x, -1*y])
--(x::Symbolic{QOperator}) = Term(+, [0, -1 * x])
-/(x::Symbolic{QOperator}, y::Symbolic{QOperator}) = Term(/, [x, y])
-/(x::Symbolic{QOperator}, y::Symbolic{Number}) = Term(/, [x, y])
-/(x::Symbolic{Number}, y::Symbolic{QOperator}) = Term(/, [x, y])
-/(x::Symbolic{QOperator}, y::Number) = Term(*, [x, 1 // y])
-/(x::Number, y::Symbolic{QOperator}) = Term(/, [x, y])
-^(x::Symbolic{QOperator}, n::Number) = Term(^, [x, n])
-^(x::Symbolic{QOperator}, n::Symbolic{QOperator}) = Term(^, [x, n])
-
-function Base.adjoint(op::Symbolic{QOperator})
-    metadt = getmetadata(op, QOperatorMeta)
-    op_type = metadt.type
-    h_idx = metadt.h_idx
-    if op_type == BosonicDestroy()
-        res = Sym{QOperator}(Symbol(String(op.name) * "_d"))
-        res = setmetadata(res, QOperatorMeta, QOperatorMeta(BosonicCreate(), h_idx))
-        return res
-    elseif op_type == BosonicCreate()
-        res = Sym{QOperator}(Symbol(String(op.name)[1:end-2]))
-        res = setmetadata(res, QOperatorMeta, QOperatorMeta(BosonicDestroy(), h_idx))
-        return res
-    end
-end
-
 function Base.isequal(a::Term{QOperator},b::Term{QOperator})
     length(arguments(a))==length(arguments(b)) || return false
     for (arg_a,arg_b) ∈ zip(arguments(a), arguments(b))
@@ -92,7 +47,7 @@ function Base.isequal(a::Term{QOperator},b::Term{QOperator})
 end
 
 function commutator(a, b)
-    return normal_order(a * b - b * a)
+    return normal_order(normal_order(a * b) - normal_order(b * a))
 end
 
 macro boson(xs...)
