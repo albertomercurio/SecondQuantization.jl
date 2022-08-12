@@ -192,7 +192,7 @@ function +(x::Symbolic{QOperator}, y::Symbolic{QOperator})
         if isterm_op(+)(y)
             args_x, args_y = arguments(x), arguments(y)
             args_unified = vcat(args_x, args_y)
-            if needs_sorting(+)(+(args_unified...))
+            if needs_sum_ordering(+(args_unified...))
                 args_unified = arguments(sort_args(+, +(args_unified...)))
             end
             # append!(args, merge_repeats(*, args_unified))

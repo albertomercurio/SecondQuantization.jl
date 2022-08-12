@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [deps]
 Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
+ParallelDataTransfer = "2dcacdae-9679-587a-88bb-8b444fb7085b"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 TermInterface = "8ea1fca8-c5ef-4a55-8b96-4e9afe9c9a3c"
 
